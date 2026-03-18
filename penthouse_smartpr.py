@@ -10,8 +10,8 @@ RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
 TEST_MODE = True  
 
-CUSTOMER_ID = 245257
-API_KEY = "Mc-rU-CZ2kCQpDSo9IsSnjpRbiDKKQWn"
+CUSTOMER_ID = int(os.getenv("SMOOBU_CUSTOMER_ID"))
+API_KEY = os.getenv("SMOOBU_API_KEY")
 
 headers = {
     "Api-Key": API_KEY,
