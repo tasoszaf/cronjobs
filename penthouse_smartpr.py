@@ -4,6 +4,7 @@
 import requests
 from datetime import datetime, timedelta
 import time
+import os
 
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
