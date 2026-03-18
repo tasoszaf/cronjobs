@@ -1,0 +1,31 @@
+name: Spata Cron Job
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:       
+
+concurrency:
+  group: "cron_jobs"
+  cancel-in-progress: false
+
+jobs:
+  run_zed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: pip install requests pandas openpyxl
+
+      - name: Run Zed Script
+        env:
+          SMOOBU_API_KEY: ${{ secrets.SMOOBU_API_KEY }}
+          SMOOBU_CUSTOMER_ID: ${{ secrets.SMOOBU_CUSTOMER_ID }}
+        run: python spata_smartpr.py
