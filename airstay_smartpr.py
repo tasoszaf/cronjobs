@@ -10,8 +10,11 @@ RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
 TEST_MODE = False  
 
+CUSTOMER_ID = int(os.getenv("SMOOBU_CUSTOMER_ID"))
+API_KEY = os.getenv("SMOOBU_API_KEY")
+
 headers = {
-    "Api-Key": "3MZqrgDd0OluEWaBywbhp7P9Zp8P2ACmVpX79rPc9R",
+    "Api-Key": API_KEY,
     "Content-Type": "application/json"
 }
 
