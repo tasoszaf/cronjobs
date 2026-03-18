@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: pip install requests pandas openpyxl
 
-      - name: Run Zed Script
+      - name: Run Spata Script
         env:
           SMOOBU_API_KEY: ${{ secrets.SMOOBU_API_KEY }}
           SMOOBU_CUSTOMER_ID: ${{ secrets.SMOOBU_CUSTOMER_ID }}
