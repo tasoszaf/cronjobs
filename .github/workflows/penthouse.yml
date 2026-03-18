@@ -1,0 +1,31 @@
+name: Penthouse Cron Job
+
+on:
+  schedule:
+    - cron: '10 7 * * *'
+  workflow_dispatch:       
+
+concurrency:
+  group: "cron_jobs"
+  cancel-in-progress: false
+
+jobs:
+  run_zed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: pip install requests pandas openpyxl
+
+      - name: Run Penthouse Script
+        env:
+          SMOOBU_API_KEY: ${{ secrets.PENTHOUSE_SMOOBU_API_KEY }}
+          SMOOBU_CUSTOMER_ID: ${{ secrets.PENTHOUSE_SMOOBU_CUSTOMER_ID }}
+        run: python penthouse_smartpr.py
