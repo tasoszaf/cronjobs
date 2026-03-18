@@ -26,6 +26,6 @@ jobs:
 
       - name: Run Penthouse Script
         env:
-          SMOOBU_API_KEY: ${{ secrets.PENTHOUSE_SMOOBU_API_KEY }}
-          SMOOBU_CUSTOMER_ID: ${{ secrets.PENTHOUSE_SMOOBU_CUSTOMER_ID }}
+          PENTHOUSE_SMOOBU_API_KEY: ${{ secrets.PENTHOUSE_SMOOBU_API_KEY }}
+          PENTHOUSE_SMOOBU_CUSTOMER_ID: ${{ secrets.PENTHOUSE_SMOOBU_CUSTOMER_ID }}
         run: python penthouse_smartpr.py
