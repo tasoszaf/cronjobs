@@ -1,4 +1,4 @@
-name: Spata Cron Job
+name: Airstay Cron Job
 
 on:
   schedule:
@@ -24,8 +24,8 @@ jobs:
       - name: Install dependencies
         run: pip install requests pandas openpyxl
 
-      - name: Run Spata Script
+      - name: Run Airstay Script
         env:
           SMOOBU_API_KEY: ${{ secrets.SMOOBU_API_KEY }}
           SMOOBU_CUSTOMER_ID: ${{ secrets.SMOOBU_CUSTOMER_ID }}
-        run: python spata_smartpr.py
+        run: python airstay_smartpr.py
