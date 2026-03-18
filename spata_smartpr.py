@@ -8,7 +8,7 @@ import time
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
-TEST_MODE = True  
+TEST_MODE = False  
 
 headers = {
     "Api-Key": "3MZqrgDd0OluEWaBywbhp7P9Zp8P2ACmVpX79rPc9R",
