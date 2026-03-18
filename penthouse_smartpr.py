@@ -79,7 +79,7 @@ def calculate_discounted_rates(rates_data, apartment_id):
 
         # Υπολογισμός έκπτωσης
         if delta == 0:
-            discount_percent = perc_discount + 0.05
+            discount_percent = perc_discount + 0.1
         else:
             discount_percent = perc_discount * (total_days - delta + 1) / total_days
 
