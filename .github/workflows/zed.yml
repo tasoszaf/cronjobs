@@ -6,7 +6,7 @@ on:
   workflow_dispatch:       # επιτρέπει χειροκίνητο run
 
 concurrency:
-  group: "cron_jobs"
+  group: "cron-${{ github.workflow }}"
   cancel-in-progress: false
 
 jobs:
