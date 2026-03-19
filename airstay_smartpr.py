@@ -119,15 +119,16 @@ def calculate_discounted_rates(rates_data, apartment_id):
     
 # ---------------- SEND OR PREVIEW ----------------
 def process_rates(apartment_id, operations):
-    if TEST_MODE:
-        print(f"\n[TEST MODE] Προεπισκόπηση τιμών για κατάλυμα {apartment_id}\n")
-    else:
+    if not TEST_MODE:
         url = "https://login.smoobu.com/api/rates"
         payload = {"apartments": [apartment_id], "operations": operations}
         safe_request("POST", url, json=payload)
 
 # ---------------- MAIN ----------------
 def main():
+     if TEST_MODE:
+        print("\n[TEST MODE] Προεπισκόπηση όλων των τιμών - ΔΕΝ αποστέλλονται στο SMOOBU\n")
+         
     start = today.isoformat()
     end = (today + timedelta(days=7)).isoformat()
     valid_apartment_ids = [apt_id for group in GROUPS.values() for apt_id in group["apartments"]]
