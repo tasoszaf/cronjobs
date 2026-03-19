@@ -6,7 +6,7 @@ on:
   workflow_dispatch:       
 
 concurrency:
-  group: "cron_jobs"
+  group: "cron-${{ github.workflow }}"
   cancel-in-progress: false
 
 jobs:
