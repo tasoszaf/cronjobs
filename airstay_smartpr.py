@@ -77,7 +77,6 @@ def calculate_discounted_rates(rates_data, apartment_id):
     for delta in range(0, total_days + 1):
         target_date = today + timedelta(days=delta)
 
-        # Διαθεσιμότητα και min_stay
         if apartment_id in GROUPS.get("KOMOS", {}).get("apartments", []) or \
            apartment_id in GROUPS.get("NAMI", {}).get("apartments", []):
             next_day = target_date + timedelta(days=1)
@@ -97,7 +96,6 @@ def calculate_discounted_rates(rates_data, apartment_id):
         if current_price is None:
             continue
 
-        # Υπολογισμός έκπτωσης
         if delta == 0:
             discount_percent = perc_discount + 0.1
         else:
@@ -113,17 +111,17 @@ def calculate_discounted_rates(rates_data, apartment_id):
         })
 
         # Αποθήκευση για ομαδοποιημένη εκτύπωση
-        date_grouped_prices[target_date.isoformat()].append((apartment_id, current_price, new_price))
+        date_grouped_prices[target_date.isoformat()].append((apartment_id, new_price))
 
-    # Compact εκτύπωση για terminal
+    # Εκτύπωση ανά ημερομηνία με format που ζητάς
     for dt in sorted(date_grouped_prices):
-        print(dt)  # εκτυπώνει μόνο την ημερομηνία
-        for apt_id, curr, new in date_grouped_prices[dt]:
-            print(f"{apt_id} | {curr}€ → {new}€")
+        print(dt)
+        for apt_id, new_price in date_grouped_prices[dt]:
+            print(f"{apt_id} | {new_price}€")
         print()  # κενή γραμμή ανά ημερομηνία
 
     return operations
-
+    
 # ---------------- SEND OR PREVIEW ----------------
 def process_rates(apartment_id, operations):
     if TEST_MODE:
