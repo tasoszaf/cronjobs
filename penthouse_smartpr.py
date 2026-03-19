@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import requests
 from datetime import datetime, timedelta
 import time
 import os
+from collections import defaultdict
 
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
@@ -20,9 +24,7 @@ headers = {
 }
 
 GROUPS = {
-    "PENTHOUSE": {"apartments": [830350,1713455,830344,830347,1663210,830323], "perc_discount": 0.10},
-   
-    
+    "PENTHOUSE": {"apartments": [830350, 1713455, 830344, 830347, 1663210, 830323], "perc_discount": 0.10},
 }
 
 today = datetime.today().date()
@@ -62,10 +64,10 @@ def calculate_discounted_rates(rates_data, apartment_id):
     perc_discount = get_group_discount(apartment_id)
     total_days = 7  
 
+    date_grouped_prices = defaultdict(list)
+
     for delta in range(0, total_days + 1):
         target_date = today + timedelta(days=delta)
-
-        # Διαθεσιμότητα με min_stay
         day_info = rates_data.get("data", {}).get(str(apartment_id), {}).get(target_date.isoformat(), {})
         available = day_info.get("available", False)
         min_stay = day_info.get("min_length_of_stay", 1)
@@ -77,15 +79,13 @@ def calculate_discounted_rates(rates_data, apartment_id):
         if current_price is None:
             continue
 
-        # Υπολογισμός έκπτωσης
         if delta == 0:
             discount_percent = perc_discount + 0.1
         else:
             discount_percent = perc_discount * (total_days - delta + 1) / total_days
 
-        
         new_price = current_price * (1 - discount_percent)
-        new_price = round(max(new_price, 52))  # όριο 52€
+        new_price = round(max(new_price, 52))
 
         operations.append({
             "dates": [target_date.isoformat()],
@@ -93,22 +93,22 @@ def calculate_discounted_rates(rates_data, apartment_id):
             "min_length_of_stay": min_stay
         })
 
-        # Καθαρή εκτύπωση
-        print(f"{apartment_id} | {target_date.isoformat()} | {current_price}€ → {new_price}€")
+        date_grouped_prices[target_date.isoformat()].append((apartment_id, new_price))
 
-    return operations
+    return operations, date_grouped_prices
 
 # ---------------- SEND OR PREVIEW ----------------
 def process_rates(apartment_id, operations):
-    if TEST_MODE:
-        print(f"\n[TEST MODE] Προεπισκόπηση τιμών για κατάλυμα {apartment_id}\n")
-    else:
+    if not TEST_MODE:
         url = "https://login.smoobu.com/api/rates"
         payload = {"apartments": [apartment_id], "operations": operations}
         safe_request("POST", url, json=payload)
 
 # ---------------- MAIN ----------------
 def main():
+    if TEST_MODE:
+        print("\n[TEST MODE] Προεπισκόπηση όλων των τιμών - ΔΕΝ αποστέλλονται στο API\n")
+
     start = today.isoformat()
     end = (today + timedelta(days=7)).isoformat()
     valid_apartment_ids = [apt_id for group in GROUPS.values() for apt_id in group["apartments"]]
@@ -120,12 +120,23 @@ def main():
         print(f"Σφάλμα φόρτωσης καταλυμάτων: {e}")
         return
 
+    all_dates_prices = defaultdict(list)
+
     for apt_id in apartment_ids:
         rates_data = get_existing_rates(apt_id, start, end)
-        operations = calculate_discounted_rates(rates_data, apt_id)
-        if operations:
-            process_rates(apt_id, operations)
+        operations, date_grouped_prices = calculate_discounted_rates(rates_data, apt_id)
+        for dt, entries in date_grouped_prices.items():
+            all_dates_prices[dt].extend(entries)
+        process_rates(apt_id, operations)
         time.sleep(SLEEP_BETWEEN_REQUESTS)
+
+    # Τελική συγκεντρωτική εκτύπωση
+    print("\n================== ΣΥΝΟΛΙΚΗ ΠΡΟΕΠΙΣΚΟΠΗΣΗ ==================")
+    for dt in sorted(all_dates_prices):
+        print(dt)
+        for apt_id, new_price in all_dates_prices[dt]:
+            print(f"{apt_id} | {new_price}€")
+        print()
 
 # Εκτέλεση
 main()
