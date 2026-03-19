@@ -77,6 +77,7 @@ def calculate_discounted_rates(rates_data, apartment_id):
     for delta in range(0, total_days + 1):
         target_date = today + timedelta(days=delta)
 
+        # Έλεγχος διαθεσιμότητας και min_stay
         if apartment_id in GROUPS.get("KOMOS", {}).get("apartments", []) or \
            apartment_id in GROUPS.get("NAMI", {}).get("apartments", []):
             next_day = target_date + timedelta(days=1)
@@ -96,6 +97,7 @@ def calculate_discounted_rates(rates_data, apartment_id):
         if current_price is None:
             continue
 
+        # Υπολογισμός έκπτωσης
         if delta == 0:
             discount_percent = perc_discount + 0.1
         else:
@@ -113,14 +115,7 @@ def calculate_discounted_rates(rates_data, apartment_id):
         # Αποθήκευση για ομαδοποιημένη εκτύπωση
         date_grouped_prices[target_date.isoformat()].append((apartment_id, new_price))
 
-    # Εκτύπωση ανά ημερομηνία με format που ζητάς
-    for dt in sorted(date_grouped_prices):
-        print(dt)
-        for apt_id, new_price in date_grouped_prices[dt]:
-            print(f"{apt_id} | {new_price}€")
-        print()  # κενή γραμμή ανά ημερομηνία
-
-    return operations
+    return operations, date_grouped_prices
     
 # ---------------- SEND OR PREVIEW ----------------
 def process_rates(apartment_id, operations):
@@ -144,12 +139,30 @@ def main():
         print(f"Σφάλμα φόρτωσης καταλυμάτων: {e}")
         return
 
+    # Συγκεντρώνουμε όλα τα αποτελέσματα εδώ
+    all_dates_prices = defaultdict(list)
+
     for apt_id in apartment_ids:
         rates_data = get_existing_rates(apt_id, start, end)
-        operations = calculate_discounted_rates(rates_data, apt_id)
+        operations, date_grouped_prices = calculate_discounted_rates(rates_data, apt_id)
+
+        # Προσθέτουμε στο global dictionary
+        for dt, entries in date_grouped_prices.items():
+            all_dates_prices[dt].extend(entries)
+
+        # Στείλε ή προεπισκόπησε τις τιμές για το κάθε κατάλυμα
         if operations:
             process_rates(apt_id, operations)
         time.sleep(SLEEP_BETWEEN_REQUESTS)
+
+    # Τελική εκτύπωση όλων των τιμών συγκεντρωτικά ανά ημερομηνία
+    print("\n================== ΣΥΝΟΛΙΚΗ ΠΡΟΕΠΙΣΚΟΠΗΣΗ ==================")
+    for dt in sorted(all_dates_prices):
+        print(dt)
+        for apt_id, new_price in all_dates_prices[dt]:
+            print(f"{apt_id} | {new_price}€")
+        print()
+
 
 # Εκτέλεση
 main()
