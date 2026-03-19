@@ -126,9 +126,9 @@ def process_rates(apartment_id, operations):
 
 # ---------------- MAIN ----------------
 def main():
-     if TEST_MODE:
-        print("\n[TEST MODE] Προεπισκόπηση όλων των τιμών - ΔΕΝ αποστέλλονται στο SMOOBU\n")
-         
+    if TEST_MODE:
+        print("\n[TEST MODE] Προεπισκόπηση όλων των τιμών - ΔΕΝ αποστέλλονται στο API\n")
+
     start = today.isoformat()
     end = (today + timedelta(days=7)).isoformat()
     valid_apartment_ids = [apt_id for group in GROUPS.values() for apt_id in group["apartments"]]
@@ -140,30 +140,22 @@ def main():
         print(f"Σφάλμα φόρτωσης καταλυμάτων: {e}")
         return
 
-    # Συγκεντρώνουμε όλα τα αποτελέσματα εδώ
     all_dates_prices = defaultdict(list)
 
     for apt_id in apartment_ids:
         rates_data = get_existing_rates(apt_id, start, end)
         operations, date_grouped_prices = calculate_discounted_rates(rates_data, apt_id)
-
-        # Προσθέτουμε στο global dictionary
         for dt, entries in date_grouped_prices.items():
             all_dates_prices[dt].extend(entries)
-
-        # Στείλε ή προεπισκόπησε τις τιμές για το κάθε κατάλυμα
-        if operations:
-            process_rates(apt_id, operations)
+        process_rates(apt_id, operations)
         time.sleep(SLEEP_BETWEEN_REQUESTS)
 
-    # Τελική εκτύπωση όλων των τιμών συγκεντρωτικά ανά ημερομηνία
     print("\n================== ΣΥΝΟΛΙΚΗ ΠΡΟΕΠΙΣΚΟΠΗΣΗ ==================")
     for dt in sorted(all_dates_prices):
         print(dt)
         for apt_id, new_price in all_dates_prices[dt]:
             print(f"{apt_id} | {new_price}€")
         print()
-
 
 # Εκτέλεση
 main()
