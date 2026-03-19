@@ -9,7 +9,7 @@ import os
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
-TEST_MODE = False
+TEST_MODE = True
 
 CUSTOMER_ID = int(os.getenv("PENTHOUSE_SMOOBU_CUSTOMER_ID"))
 API_KEY = os.getenv("PENTHOUSE_SMOOBU_API_KEY")
