@@ -5,6 +5,7 @@ import requests
 from datetime import datetime, timedelta
 import time
 import os
+from collections import defaultdict
 
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
@@ -70,10 +71,13 @@ def calculate_discounted_rates(rates_data, apartment_id):
     perc_discount = get_group_discount(apartment_id)
     total_days = 7  
 
+    # Ομαδοποίηση τιμών ανά ημερομηνία
+    date_grouped_prices = defaultdict(list)
+
     for delta in range(0, total_days + 1):
         target_date = today + timedelta(days=delta)
 
-        # Διαθεσιμότητα με min_stay
+        # Διαθεσιμότητα και min_stay
         if apartment_id in GROUPS.get("KOMOS", {}).get("apartments", []) or \
            apartment_id in GROUPS.get("NAMI", {}).get("apartments", []):
             next_day = target_date + timedelta(days=1)
@@ -99,7 +103,6 @@ def calculate_discounted_rates(rates_data, apartment_id):
         else:
             discount_percent = perc_discount * (total_days - delta + 1) / total_days
 
-        
         new_price = current_price * (1 - discount_percent)
         new_price = round(max(new_price, 52))  # όριο 52€
 
@@ -109,8 +112,15 @@ def calculate_discounted_rates(rates_data, apartment_id):
             "min_length_of_stay": min_stay
         })
 
-        # Καθαρή εκτύπωση
-        print(f"{apartment_id} | {target_date.isoformat()} | {current_price}€ → {new_price}€")
+        # Αποθήκευση για ομαδοποιημένη εκτύπωση
+        date_grouped_prices[target_date.isoformat()].append((apartment_id, current_price, new_price))
+
+    # Compact εκτύπωση για terminal
+    for dt in sorted(date_grouped_prices):
+        print(dt)  # εκτυπώνει μόνο την ημερομηνία
+        for apt_id, curr, new in date_grouped_prices[dt]:
+            print(f"{apt_id} | {curr}€ → {new}€")
+        print()  # κενή γραμμή ανά ημερομηνία
 
     return operations
 
