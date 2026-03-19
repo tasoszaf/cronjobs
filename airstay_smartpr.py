@@ -10,7 +10,7 @@ from collections import defaultdict
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
-TEST_MODE = False  
+TEST_MODE = True 
 
 CUSTOMER_ID = int(os.getenv("SMOOBU_CUSTOMER_ID"))
 API_KEY = os.getenv("SMOOBU_API_KEY")
