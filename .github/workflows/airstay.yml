@@ -5,12 +5,8 @@ on:
     - cron: '25 7 * * *'
   workflow_dispatch:       
 
-concurrency:
-  group: "cron_jobs_per_day"
-  cancel-in-progress: false
-
 jobs:
-  run_zed:
+  run_airstay:
     runs-on: ubuntu-latest
 
     steps:
