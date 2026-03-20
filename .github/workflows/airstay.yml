@@ -6,7 +6,7 @@ on:
   workflow_dispatch:       
 
 concurrency:
-  group: "cron_jobs"
+  group: "cron_jobs_per_day"
   cancel-in-progress: false
 
 jobs:
