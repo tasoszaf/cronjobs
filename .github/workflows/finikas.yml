@@ -5,12 +5,8 @@ on:
     - cron: "30 * * * *"  
   workflow_dispatch:       # για χειροκίνητο run
 
-concurrency:
-  group: "cron_jobs_per_hour"
-  cancel-in-progress: false
-
 jobs:
-  run_pricing:
+  run_finikas:
     runs-on: ubuntu-latest
 
     steps:
