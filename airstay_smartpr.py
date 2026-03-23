@@ -10,7 +10,7 @@ from collections import defaultdict
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
-TEST_MODE = False
+TEST_MODE = True
 
 CUSTOMER_ID = int(os.getenv("SMOOBU_CUSTOMER_ID"))
 API_KEY = os.getenv("SMOOBU_API_KEY")
@@ -73,34 +73,28 @@ def calculate_discounted_rates(rates_data, apartment_id):
     total_days = 7
     daily_discount = perc_discount / total_days
 
-
+    # Βρες την πρώτη τιμή ξεκινώντας από today+7
     base_price = None
     for d in range(total_days, -1, -1):
         day_info = (rates_data
                     .get("data", {})
                     .get(str(apartment_id), {})
                     .get((today + timedelta(days=d)).isoformat(), {}))
-        if day_info.get("available", False) and day_info.get("price") is not None:
+        if day_info.get("price") is not None:
             base_price = day_info.get("price")
-            print(f"{apartment_id} | Βασική τιμή από today+{d}: {base_price}€")
             break
 
     if base_price is None:
-        print(f"⚠️ {apartment_id} | Δεν βρέθηκε καμία διαθέσιμη τιμή, παράλειψη.")
         return operations, date_grouped_prices
 
     running_price = base_price
 
     for delta in range(total_days, -1, -1):  # 7 → 0
         target_date = today + timedelta(days=delta)
-
         day_info = (rates_data
                     .get("data", {})
                     .get(str(apartment_id), {})
                     .get(target_date.isoformat(), {}))
-
-        if not day_info.get("available", False):
-            continue
 
         discount = daily_discount
         if delta == 0:
@@ -118,12 +112,6 @@ def calculate_discounted_rates(rates_data, apartment_id):
             (apartment_id, running_price)
         )
 
-        print(
-            f"{apartment_id} | {target_date} | "
-            f"Δέκπτωση: {discount:.3%} | "
-            f"νέα: {running_price}€"
-        )
-
     return operations, date_grouped_prices
 
 # ---------------- SEND OR PREVIEW ----------------
@@ -136,7 +124,9 @@ def process_rates(apartment_id, operations):
 # ---------------- MAIN ----------------
 def main():
     if TEST_MODE:
-        print("\n[TEST MODE] Προεπισκόπηση όλων των τιμών - ΔΕΝ αποστέλλονται στο API\n")
+        print("\n[TEST MODE] ΔΕΝ αποστέλλονται στο Smoobu\n")
+    else:
+        print("\n[LIVE] Αποστέλλονται στο Smoobu\n")
 
     start = today.isoformat()
     end = (today + timedelta(days=7)).isoformat()
@@ -166,7 +156,7 @@ def main():
             print(f"⚠️ Σφάλμα για κατάλυμα {apt_id}: {e}")
         time.sleep(SLEEP_BETWEEN_REQUESTS)
 
-    print("\n================== ΣΥΝΟΛΙΚΗ ΠΡΟΕΠΙΣΚΟΠΗΣΗ ==================")
+    print("================== ΠΡΟΕΠΙΣΚΟΠΗΣΗ ==================")
     for dt in sorted(all_dates_prices):
         print(dt)
         for apt_id, new_price in all_dates_prices[dt]:
