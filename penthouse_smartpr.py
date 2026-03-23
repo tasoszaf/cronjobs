@@ -69,7 +69,7 @@ def calculate_discounted_rates(rates_data, apartment_id):
                     .get("data", {})
                     .get(str(apartment_id), {})
                     .get((today + timedelta(days=d)).isoformat(), {}))
-        if day_info.get("available", False) and day_info.get("price") is not None:
+        if day_info.get("price") is not None:
             base_price = day_info.get("price")
             break
 
@@ -90,9 +90,6 @@ def calculate_discounted_rates(rates_data, apartment_id):
             discount += 0.10
 
         running_price = round(max(running_price * (1 - discount), 52))
-
-        if not day_info.get("available", False):
-            continue
 
         operations.append({
             "dates": [target_date.isoformat()],
