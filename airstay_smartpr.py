@@ -10,7 +10,7 @@ from collections import defaultdict
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
-TEST_MODE = True
+TEST_MODE = False
 
 CUSTOMER_ID = int(os.getenv("SMOOBU_CUSTOMER_ID"))
 API_KEY = os.getenv("SMOOBU_API_KEY")
@@ -73,7 +73,7 @@ def calculate_discounted_rates(rates_data, apartment_id):
     total_days = 7
     daily_discount = perc_discount / total_days
 
-    # Βρες την πρώτη διαθέσιμη τιμή ξεκινώντας από today+7
+
     base_price = None
     for d in range(total_days, -1, -1):
         day_info = (rates_data
