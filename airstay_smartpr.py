@@ -10,7 +10,7 @@ from collections import defaultdict
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
-TEST_MODE = False
+TEST_MODE = True
 
 CUSTOMER_ID = int(os.getenv("SMOOBU_CUSTOMER_ID"))
 API_KEY = os.getenv("SMOOBU_API_KEY")
@@ -71,51 +71,56 @@ def calculate_discounted_rates(rates_data, apartment_id):
     perc_discount = get_group_discount(apartment_id)
     total_days = 7  
 
-    # Ομαδοποίηση τιμών ανά ημερομηνία
-    date_grouped_prices = defaultdict(list)
-
     for delta in range(0, total_days + 1):
         target_date = today + timedelta(days=delta)
 
-        # Έλεγχος διαθεσιμότητας και min_stay
-        if apartment_id in GROUPS.get("KOMOS", {}).get("apartments", []) or \
-           apartment_id in GROUPS.get("NAMI", {}).get("apartments", []):
-            next_day = target_date + timedelta(days=1)
-            day_info = rates_data.get("data", {}).get(str(apartment_id), {}).get(target_date.isoformat(), {})
-            next_day_info = rates_data.get("data", {}).get(str(apartment_id), {}).get(next_day.isoformat(), {})
-            available = day_info.get("available", False) and next_day_info.get("available", False)
-            min_stay = 2
-        else:
-            day_info = rates_data.get("data", {}).get(str(apartment_id), {}).get(target_date.isoformat(), {})
-            available = day_info.get("available", False)
-            min_stay = day_info.get("min_length_of_stay", 1)
-
-        if not available:
+        day_info = rates_data.get("data", {}).get(str(apartment_id), {}).get(target_date.isoformat(), {})
+        
+        if not day_info.get("available", False):
             continue
 
         current_price = day_info.get("price")
         if current_price is None:
             continue
 
-        # Υπολογισμός έκπτωσης
+        # 🔥 συνολικό discount σήμερα
         if delta == 0:
-            discount_percent = perc_discount + 0.1
+            total_discount_today = perc_discount + 0.1
         else:
-            discount_percent = perc_discount * (total_days - delta + 1) / total_days
+            total_discount_today = perc_discount * (total_days - delta + 1) / total_days
 
-        new_price = current_price * (1 - discount_percent)
-        new_price = round(max(new_price, 52))  # όριο 52€
+        # 🔥 συνολικό discount ΧΘΕΣ
+        if delta == total_days:
+            total_discount_yesterday = 0
+        else:
+            if delta + 1 == 0:
+                total_discount_yesterday = perc_discount + 0.1
+            else:
+                total_discount_yesterday = perc_discount * (total_days - (delta + 1) + 1) / total_days
+
+        # 🔥 μόνο η διαφορά
+        incremental_discount = total_discount_today - total_discount_yesterday
+
+        if incremental_discount <= 0:
+            continue
+
+        new_price = current_price * (1 - incremental_discount)
+        new_price = round(max(new_price, 52))
 
         operations.append({
             "dates": [target_date.isoformat()],
             "daily_price": new_price,
-            "min_length_of_stay": min_stay
+            "min_length_of_stay": day_info.get("min_length_of_stay", 1)
         })
 
-        # Αποθήκευση για ομαδοποιημένη εκτύπωση
-        date_grouped_prices[target_date.isoformat()].append((apartment_id, new_price))
+        print(
+            f"{apartment_id} | {target_date} | "
+            f"current: {current_price} | "
+            f"Δdisc: {incremental_discount:.3f} | "
+            f"new: {new_price}"
+        )
 
-    return operations, date_grouped_prices
+    return operations, {}
     
 # ---------------- SEND OR PREVIEW ----------------
 def process_rates(apartment_id, operations):
