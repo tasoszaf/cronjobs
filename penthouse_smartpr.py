@@ -10,7 +10,7 @@ from collections import defaultdict
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
-TEST_MODE = False
+TEST_MODE = True
 
 CUSTOMER_ID = int(os.getenv("PENTHOUSE_SMOOBU_CUSTOMER_ID"))
 API_KEY = os.getenv("PENTHOUSE_SMOOBU_API_KEY")
@@ -58,39 +58,61 @@ def get_group_discount(apartment_id):
 # ---------------- RATE CALCULATION ----------------
 def calculate_discounted_rates(rates_data, apartment_id):
     operations = []
+    date_grouped_prices = {}
     perc_discount = get_group_discount(apartment_id)
-    total_days = 7  
+    total_days = 7
+    daily_discount = perc_discount / total_days
 
-    date_grouped_prices = defaultdict(list)
+    # Βρες την πρώτη διαθέσιμη τιμή ξεκινώντας από today+7
+    base_price = None
+    for d in range(total_days, -1, -1):
+        day_info = (rates_data
+                    .get("data", {})
+                    .get(str(apartment_id), {})
+                    .get((today + timedelta(days=d)).isoformat(), {}))
+        if day_info.get("available", False) and day_info.get("price") is not None:
+            base_price = day_info.get("price")
+            print(f"{apartment_id} | Βασική τιμή από today+{d}: {base_price}€")
+            break
 
-    for delta in range(0, total_days + 1):
+    if base_price is None:
+        print(f"⚠️ {apartment_id} | Δεν βρέθηκε καμία διαθέσιμη τιμή, παράλειψη.")
+        return operations, date_grouped_prices
+
+    running_price = base_price
+
+    for delta in range(total_days, -1, -1):  # 7 → 0
         target_date = today + timedelta(days=delta)
-        day_info = rates_data.get("data", {}).get(str(apartment_id), {}).get(target_date.isoformat(), {})
-        available = day_info.get("available", False)
-        min_stay = day_info.get("min_length_of_stay", 1)
 
-        if not available:
+        day_info = (rates_data
+                    .get("data", {})
+                    .get(str(apartment_id), {})
+                    .get(target_date.isoformat(), {}))
+
+        if not day_info.get("available", False):
             continue
 
-        current_price = day_info.get("price")
-        if current_price is None:
-            continue
-
+        discount = daily_discount
         if delta == 0:
-            discount_percent = perc_discount + 0.1
-        else:
-            discount_percent = perc_discount * (total_days - delta + 1) / total_days
+            discount += 0.10
 
-        new_price = current_price * (1 - discount_percent)
-        new_price = round(max(new_price, 52))
+        running_price = round(max(running_price * (1 - discount), 52))
 
         operations.append({
             "dates": [target_date.isoformat()],
-            "daily_price": new_price,
-            "min_length_of_stay": min_stay
+            "daily_price": running_price,
+            "min_length_of_stay": day_info.get("min_length_of_stay", 1)
         })
 
-        date_grouped_prices[target_date.isoformat()].append((apartment_id, new_price))
+        date_grouped_prices.setdefault(target_date.isoformat(), []).append(
+            (apartment_id, running_price)
+        )
+
+        print(
+            f"{apartment_id} | {target_date} | "
+            f"Δέκπτωση: {discount:.3%} | "
+            f"νέα: {running_price}€"
+        )
 
     return operations, date_grouped_prices
 
@@ -117,23 +139,28 @@ def main():
         print(f"Σφάλμα φόρτωσης καταλυμάτων: {e}")
         return
 
+    if not apartment_ids:
+        print("Δεν βρέθηκαν έγκυρα καταλύματα.")
+        return
+
     all_dates_prices = defaultdict(list)
 
     for apt_id in apartment_ids:
-        rates_data = get_existing_rates(apt_id, start, end)
-        operations, date_grouped_prices = calculate_discounted_rates(rates_data, apt_id)
-        for dt, entries in date_grouped_prices.items():
-            all_dates_prices[dt].extend(entries)
-        process_rates(apt_id, operations)
+        try:
+            rates_data = get_existing_rates(apt_id, start, end)
+            operations, date_grouped_prices = calculate_discounted_rates(rates_data, apt_id)
+            for dt, entries in date_grouped_prices.items():
+                all_dates_prices[dt].extend(entries)
+            process_rates(apt_id, operations)
+        except Exception as e:
+            print(f"⚠️ Σφάλμα για κατάλυμα {apt_id}: {e}")
         time.sleep(SLEEP_BETWEEN_REQUESTS)
 
-    # Τελική συγκεντρωτική εκτύπωση
     print("\n================== ΣΥΝΟΛΙΚΗ ΠΡΟΕΠΙΣΚΟΠΗΣΗ ==================")
     for dt in sorted(all_dates_prices):
         print(dt)
         for apt_id, new_price in all_dates_prices[dt]:
-            print(f"{apt_id} | {new_price}€")
+            print(f"  {apt_id} | {new_price}€")
         print()
 
-# Εκτέλεση
 main()
