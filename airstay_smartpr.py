@@ -71,9 +71,27 @@ def calculate_discounted_rates(rates_data, apartment_id):
     date_grouped_prices = {}
     perc_discount = get_group_discount(apartment_id)
     total_days = 7
-    daily_discount = perc_discount / total_days  # π.χ. 0.10/7 ≈ 1.43% την ημέρα
+    daily_discount = perc_discount / total_days
 
-    for delta in range(total_days + 1):  # 0..7 → σήμερα + 7 μέρες μπροστά
+    # Βρες την πρώτη διαθέσιμη τιμή ξεκινώντας από today+7
+    base_price = None
+    for d in range(total_days, -1, -1):
+        day_info = (rates_data
+                    .get("data", {})
+                    .get(str(apartment_id), {})
+                    .get((today + timedelta(days=d)).isoformat(), {}))
+        if day_info.get("available", False) and day_info.get("price") is not None:
+            base_price = day_info.get("price")
+            print(f"{apartment_id} | Βασική τιμή από today+{d}: {base_price}€")
+            break
+
+    if base_price is None:
+        print(f"⚠️ {apartment_id} | Δεν βρέθηκε καμία διαθέσιμη τιμή, παράλειψη.")
+        return operations, date_grouped_prices
+
+    running_price = base_price
+
+    for delta in range(total_days, -1, -1):  # 7 → 0
         target_date = today + timedelta(days=delta)
 
         day_info = (rates_data
@@ -84,31 +102,26 @@ def calculate_discounted_rates(rates_data, apartment_id):
         if not day_info.get("available", False):
             continue
 
-        current_price = day_info.get("price")
-        if current_price is None:
-            continue
-
         discount = daily_discount
         if delta == 0:
-            discount += 0.10  # έξτρα 10% την ίδια μέρα
+            discount += 0.10
 
-        new_price = round(max(current_price * (1 - discount), 52))
+        running_price = round(max(running_price * (1 - discount), 52))
 
         operations.append({
             "dates": [target_date.isoformat()],
-            "daily_price": new_price,
+            "daily_price": running_price,
             "min_length_of_stay": day_info.get("min_length_of_stay", 1)
         })
 
         date_grouped_prices.setdefault(target_date.isoformat(), []).append(
-            (apartment_id, new_price)
+            (apartment_id, running_price)
         )
 
         print(
             f"{apartment_id} | {target_date} | "
-            f"τρέχουσα: {current_price:.2f} | "
             f"Δέκπτωση: {discount:.3%} | "
-            f"νέα: {new_price}"
+            f"νέα: {running_price}€"
         )
 
     return operations, date_grouped_prices
