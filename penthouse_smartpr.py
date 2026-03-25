@@ -10,7 +10,7 @@ from collections import defaultdict
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
-TEST_MODE = True
+TEST_MODE = False
 
 CUSTOMER_ID = int(os.getenv("PENTHOUSE_SMOOBU_CUSTOMER_ID"))
 API_KEY = os.getenv("PENTHOUSE_SMOOBU_API_KEY")
@@ -87,7 +87,7 @@ def calculate_discounted_rates(rates_data, apartment_id):
 
         discount = daily_discount
         if delta == 0:
-            discount += 0.10
+            discount += 0.20
 
         running_price = round(max(running_price * (1 - discount), 52))
 
