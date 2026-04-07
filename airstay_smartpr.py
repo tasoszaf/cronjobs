@@ -24,7 +24,7 @@ GROUPS = {
     "KALISTA": {"apartments": [750921], "perc_discount": 0.10},
     "ORIANNA": {"apartments": [1607131], "perc_discount": 0.10},
     "ANIVIA": {"apartments": [563703, 563706], "perc_discount": 0.10},
-    "ELISE": {"apartments": [563625, 1405415], "perc_discount": 0.10},
+    "ELISE": {"apartments": [563625, 1405415, 3231667], "perc_discount": 0.10},
     "JAAX": {"apartments": [2712218], "perc_discount": 0.15},
     "AKALI": {"apartments": [1713746], "perc_discount": 0.10},
     "KOMOS": {"apartments": [2160281, 2160286, 2160291], "perc_discount": 0.20},
