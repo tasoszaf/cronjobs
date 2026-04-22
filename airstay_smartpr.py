@@ -10,7 +10,7 @@ from collections import defaultdict
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
-TEST_MODE = False
+TEST_MODE = True
 
 CUSTOMER_ID = int(os.getenv("SMOOBU_CUSTOMER_ID"))
 API_KEY = os.getenv("SMOOBU_API_KEY")
@@ -24,7 +24,7 @@ GROUPS = {
     "KALISTA": {"apartments": [750921], "perc_discount": 0.10},
     "ORIANNA": {"apartments": [1607131], "perc_discount": 0.10},
     "ANIVIA": {"apartments": [563703, 563706], "perc_discount": 0.10},
-    "ELISE": {"apartments": [563625, 1405415], "perc_discount": 0.10},
+    "ELISE": {"apartments": [563625, 1405415, 3231667], "perc_discount": 0.10},
     "JAAX": {"apartments": [2712218], "perc_discount": 0.15},
     "AKALI": {"apartments": [1713746], "perc_discount": 0.10},
     "KOMOS": {"apartments": [2160281, 2160286, 2160291], "perc_discount": 0.20},
