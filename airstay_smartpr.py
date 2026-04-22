@@ -21,20 +21,27 @@ headers = {
 }
 
 GROUPS = {
-    "KALISTA": {"apartments": [750921], "perc_discount": 0.10},
-    "ORIANNA": {"apartments": [1607131], "perc_discount": 0.10},
-    "ANIVIA": {"apartments": [563703, 563706], "perc_discount": 0.10},
-    "ELISE": {"apartments": [563625, 1405415, 3231667], "perc_discount": 0.10},
-    "JAAX": {"apartments": [2712218], "perc_discount": 0.15},
-    "AKALI": {"apartments": [1713746], "perc_discount": 0.10},
-    "KOMOS": {"apartments": [2160281, 2160286, 2160291], "perc_discount": 0.20},
-    "CHELI": {"apartments": [2146456, 2146461], "perc_discount": 0.10},
-    "NAUTILUS": {"apartments": [563712, 563724, 563718, 563721, 563715, 563727], "perc_discount": 0.10},
-    "NAMI": {"apartments": [1275248], "perc_discount": 0.20},
-    "THRESH": {"apartments": [563628, 563631, 563643], "perc_discount": 0.10}
+    "KALISTA":  {"apartments": [750921],                                         "max_drop": 0.20},
+    "ORIANNA":  {"apartments": [1607131],                                        "max_drop": 0.20},
+    "ANIVIA":   {"apartments": [563703, 563706],                                 "max_drop": 0.20},
+    "ELISE":    {"apartments": [563625, 1405415, 3231667],                       "max_drop": 0.20},
+    "JAAX":     {"apartments": [2712218],                                        "max_drop": 0.25},
+    "AKALI":    {"apartments": [1713746],                                        "max_drop": 0.20},
+    "KOMOS":    {"apartments": [2160281, 2160286, 2160291],                      "max_drop": 0.30},
+    "CHELI":    {"apartments": [2146456, 2146461],                               "max_drop": 0.20},
+    "NAUTILUS": {"apartments": [563712, 563724, 563718, 563721, 563715, 563727], "max_drop": 0.20},
+    "NAMI":     {"apartments": [1275248],                                        "max_drop": 0.30},
+    "THRESH":   {"apartments": [563628, 563631, 563643],                         "max_drop": 0.20},
 }
 
+# Urgency παράθυρο: σήμερα + 4 μέρες μπροστά
+URGENCY_WINDOW = 4
+
+# Floor price — δεν πέφτεις ποτέ κάτω
+FLOOR_PRICE = 52
+
 today = datetime.today().date()
+
 
 # ---------------- HELPERS ----------------
 def safe_request(method, url, **kwargs):
@@ -48,10 +55,12 @@ def safe_request(method, url, **kwargs):
         time.sleep(SLEEP_BETWEEN_REQUESTS)
     raise Exception(f"❌ Αποτυχία {method} στο {url} μετά από {RETRY_LIMIT} προσπάθειες")
 
+
 def get_apartments():
     url = "https://login.smoobu.com/api/apartments"
     response = safe_request("GET", url)
     return [apt["id"] for apt in response.json().get("apartments", [])]
+
 
 def get_existing_rates(apartment_id, start_date, end_date):
     url = "https://login.smoobu.com/api/rates"
@@ -59,60 +68,63 @@ def get_existing_rates(apartment_id, start_date, end_date):
     response = safe_request("GET", url, params=params)
     return response.json()
 
+
 def get_group_discount(apartment_id):
     for group in GROUPS.values():
         if apartment_id in group["apartments"]:
-            return group["perc_discount"]
+            return group["max_drop"]
     return 0.0
+
+
+def is_available(day_info: dict) -> bool:
+    """True αν η μέρα είναι ΑΔΕΙΑ."""
+    return day_info.get("available", True) is True
+
 
 # ---------------- RATE CALCULATION ----------------
 def calculate_discounted_rates(rates_data, apartment_id):
     operations = []
     date_grouped_prices = {}
-    perc_discount = get_group_discount(apartment_id)
-    total_days = 7
-    daily_discount = perc_discount / total_days
 
-    # Βρες την πρώτη τιμή ξεκινώντας από today+7
+    max_drop = get_group_discount(apartment_id)
+    apt_data = rates_data.get("data", {}).get(str(apartment_id), {})
+
+    # Base price: η τιμή του delta=4 (ή η πρώτη διαθέσιμη)
     base_price = None
-    for d in range(total_days, -1, -1):
-        day_info = (rates_data
-                    .get("data", {})
-                    .get(str(apartment_id), {})
-                    .get((today + timedelta(days=d)).isoformat(), {}))
+    for d in range(URGENCY_WINDOW, -1, -1):
+        day_info = apt_data.get((today + timedelta(days=d)).isoformat(), {})
         if day_info.get("price") is not None:
-            base_price = day_info.get("price")
+            base_price = day_info["price"]
             break
 
     if base_price is None:
         return operations, date_grouped_prices
 
-    running_price = base_price
-
-    for delta in range(total_days, -1, -1):  # 7 → 0
+    # Μόνο delta 4 → 0
+    for delta in range(URGENCY_WINDOW, -1, -1):
         target_date = today + timedelta(days=delta)
-        day_info = (rates_data
-                    .get("data", {})
-                    .get(str(apartment_id), {})
-                    .get(target_date.isoformat(), {}))
+        day_info = apt_data.get(target_date.isoformat(), {})
 
-        discount = daily_discount
-        if delta == 0:
-            discount += 0.10
+        # Κρατημένη μέρα: καμία αλλαγή
+        if not is_available(day_info):
+            continue
 
-        running_price = round(max(running_price * (1 - discount), 52))
+        # Τετραγωνική urgency: max_drop × (1 - delta/4)²
+        urgency = max_drop * (1 - delta / URGENCY_WINDOW) ** 2
+        new_price = round(max(base_price * (1 - urgency), FLOOR_PRICE))
 
         operations.append({
             "dates": [target_date.isoformat()],
-            "daily_price": running_price,
+            "daily_price": new_price,
             "min_length_of_stay": day_info.get("min_length_of_stay", 1)
         })
 
         date_grouped_prices.setdefault(target_date.isoformat(), []).append(
-            (apartment_id, running_price)
+            (apartment_id, new_price)
         )
 
     return operations, date_grouped_prices
+
 
 # ---------------- SEND OR PREVIEW ----------------
 def process_rates(apartment_id, operations):
@@ -120,6 +132,7 @@ def process_rates(apartment_id, operations):
         url = "https://login.smoobu.com/api/rates"
         payload = {"apartments": [apartment_id], "operations": operations}
         safe_request("POST", url, json=payload)
+
 
 # ---------------- MAIN ----------------
 def main():
@@ -129,7 +142,7 @@ def main():
         print("\n[LIVE] Αποστέλλονται στο Smoobu\n")
 
     start = today.isoformat()
-    end = (today + timedelta(days=7)).isoformat()
+    end = (today + timedelta(days=URGENCY_WINDOW)).isoformat()
     valid_apartment_ids = [apt_id for group in GROUPS.values() for apt_id in group["apartments"]]
 
     try:
@@ -162,5 +175,6 @@ def main():
         for apt_id, new_price in all_dates_prices[dt]:
             print(f"  {apt_id} | {new_price}€")
         print()
+
 
 main()
