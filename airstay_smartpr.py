@@ -74,7 +74,7 @@ def get_group_discount(apartment_id):
 
 
 def is_available(day_info: dict) -> bool:
-    return day_info.get("available", True) is True
+    return bool(day_info.get("available", 1))
 
 
 # ---------------- RATE CALCULATION ----------------
