@@ -21,7 +21,7 @@ headers = {
 }
 
 GROUPS = {
-    "PENTHOUSE": {"apartments": [830350, 1713455, 830344, 830347, 1663210, 830323], "max_drop": 0.20},
+    "PENTHOUSE": {"apartments": [830350, 1713455, 830344, 830347, 1663210, 830323], "max_drop": 0.25},
 }
 
 URGENCY_WINDOW = 4
