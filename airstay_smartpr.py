@@ -21,17 +21,17 @@ headers = {
 }
 
 GROUPS = {
-    "KALISTA":  {"apartments": [750921],                                         "max_drop": 0.20},
-    "ORIANNA":  {"apartments": [1607131],                                        "max_drop": 0.20},
-    "ANIVIA":   {"apartments": [563703, 563706],                                 "max_drop": 0.20},
-    "ELISE":    {"apartments": [563625, 1405415, 3231667],                       "max_drop": 0.20},
+    "KALISTA":  {"apartments": [750921],                                         "max_drop": 0.25},
+    "ORIANNA":  {"apartments": [1607131],                                        "max_drop": 0.25},
+    "ANIVIA":   {"apartments": [563703, 563706],                                 "max_drop": 0.25},
+    "ELISE":    {"apartments": [563625, 1405415, 3231667],                       "max_drop": 0.25},
     "JAAX":     {"apartments": [2712218],                                        "max_drop": 0.25},
-    "AKALI":    {"apartments": [1713746],                                        "max_drop": 0.20},
+    "AKALI":    {"apartments": [1713746],                                        "max_drop": 0.25},
     "KOMOS":    {"apartments": [2160281, 2160286, 2160291],                      "max_drop": 0.30},
-    "CHELI":    {"apartments": [2146456, 2146461],                               "max_drop": 0.20},
-    "NAUTILUS": {"apartments": [563712, 563724, 563718, 563721, 563715, 563727], "max_drop": 0.20},
+    "CHELI":    {"apartments": [2146456, 2146461],                               "max_drop": 0.25},
+    "NAUTILUS": {"apartments": [563712, 563724, 563718, 563721, 563715, 563727], "max_drop": 0.25},
     "NAMI":     {"apartments": [1275248],                                        "max_drop": 0.30},
-    "THRESH":   {"apartments": [563628, 563631, 563643],                         "max_drop": 0.20},
+    "THRESH":   {"apartments": [563628, 563631, 563643],                         "max_drop": 0.25},
 }
 
 URGENCY_WINDOW = 4
