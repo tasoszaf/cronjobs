@@ -86,27 +86,20 @@ def calculate_discounted_rates(rates_data, apartment_id):
     apt_data = rates_data.get("data", {}).get(str(apartment_id), {})
 
 
-    base_price = None
-    for d in range(URGENCY_WINDOW, -1, -1):
-        day_info = apt_data.get((today + timedelta(days=d)).isoformat(), {})
-        if day_info.get("price") is not None:
-            base_price = day_info["price"]
-            break
-
-    if base_price is None:
-        return operations, date_grouped_prices
-
-
     for delta in range(URGENCY_WINDOW, -1, -1):
         target_date = today + timedelta(days=delta)
         day_info = apt_data.get(target_date.isoformat(), {})
 
-
         if not is_available(day_info):
             continue
 
-        step = (base_price * max_drop) / (URGENCY_WINDOW + 1)
-        new_price = round(max(base_price - step * delta, FLOOR_PRICE))
+        day_price = day_info.get("price")
+        if day_price is None:
+            continue
+
+        
+        discount = (max_drop / (URGENCY_WINDOW + 1)) * (URGENCY_WINDOW - delta + 1)
+        new_price = round(max(day_price * (1 - discount), FLOOR_PRICE))
 
         operations.append({
             "dates": [target_date.isoformat()],
