@@ -85,8 +85,6 @@ def calculate_discounted_rates(rates_data, apartment_id):
     max_drop = get_group_discount(apartment_id)
     apt_data = rates_data.get("data", {}).get(str(apartment_id), {})
 
-    if TEST_MODE:
-        print(f"  [DEBUG] {apartment_id} — keys: {list(apt_data.keys())}")
 
     base_price = None
     for d in range(URGENCY_WINDOW, -1, -1):
@@ -96,23 +94,15 @@ def calculate_discounted_rates(rates_data, apartment_id):
             break
 
     if base_price is None:
-        if TEST_MODE:
-            print(f"  [DEBUG] {apartment_id} — δεν βρεθηκε base_price, skip")
         return operations, date_grouped_prices
 
-    if TEST_MODE:
-        print(f"  [DEBUG] {apartment_id} — base_price={base_price}EUR")
 
     for delta in range(URGENCY_WINDOW, -1, -1):
         target_date = today + timedelta(days=delta)
         day_info = apt_data.get(target_date.isoformat(), {})
 
-        if TEST_MODE:
-            print(f"  [DEBUG] {apartment_id} — {target_date} day_info: {day_info}")
 
         if not is_available(day_info):
-            if TEST_MODE:
-                print(f"  [DEBUG] {apartment_id} — {target_date} kratimeni, skip")
             continue
 
         urgency = max_drop * (1 - delta / URGENCY_WINDOW) ** 2
@@ -156,9 +146,6 @@ def main():
     except Exception as e:
         print(f"Sfalma fortosis: {e}")
         return
-
-    if TEST_MODE:
-        print(f"Vrethikan {len(apartment_ids)} apartments: {apartment_ids}\n")
 
     if not apartment_ids:
         print("Den vrethikan egkyra katalymata.")
