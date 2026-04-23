@@ -106,7 +106,7 @@ def calculate_discounted_rates(rates_data, apartment_id):
             continue
 
         step = (base_price * max_drop) / (URGENCY_WINDOW + 1)
-        new_price = round(max(base_price - step * (URGENCY_WINDOW - delta), FLOOR_PRICE))
+        new_price = round(max(base_price - step * delta, FLOOR_PRICE))
 
         operations.append({
             "dates": [target_date.isoformat()],
