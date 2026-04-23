@@ -25,7 +25,7 @@ GROUPS = {
 }
 
 URGENCY_WINDOW = 4
-FLOOR_PRICE = 52
+FLOOR_PRICE = 55
 
 today = datetime.today().date()
 
