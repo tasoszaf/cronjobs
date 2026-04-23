@@ -34,10 +34,7 @@ GROUPS = {
     "THRESH":   {"apartments": [563628, 563631, 563643],                         "max_drop": 0.20},
 }
 
-# Urgency παράθυρο: σήμερα + 4 μέρες μπροστά
 URGENCY_WINDOW = 4
-
-# Floor price — δεν πέφτεις ποτέ κάτω
 FLOOR_PRICE = 52
 
 today = datetime.today().date()
@@ -53,7 +50,7 @@ def safe_request(method, url, **kwargs):
         except requests.RequestException:
             pass
         time.sleep(SLEEP_BETWEEN_REQUESTS)
-    raise Exception(f"❌ Αποτυχία {method} στο {url} μετά από {RETRY_LIMIT} προσπάθειες")
+    raise Exception(f"Αποτυχια {method} στο {url}")
 
 
 def get_apartments():
@@ -77,7 +74,6 @@ def get_group_discount(apartment_id):
 
 
 def is_available(day_info: dict) -> bool:
-    """True αν η μέρα είναι ΑΔΕΙΑ."""
     return day_info.get("available", True) is True
 
 
@@ -89,7 +85,9 @@ def calculate_discounted_rates(rates_data, apartment_id):
     max_drop = get_group_discount(apartment_id)
     apt_data = rates_data.get("data", {}).get(str(apartment_id), {})
 
-    # Base price: η τιμή του delta=4 (ή η πρώτη διαθέσιμη)
+    if TEST_MODE:
+        print(f"  [DEBUG] {apartment_id} — keys: {list(apt_data.keys())}")
+
     base_price = None
     for d in range(URGENCY_WINDOW, -1, -1):
         day_info = apt_data.get((today + timedelta(days=d)).isoformat(), {})
@@ -98,18 +96,22 @@ def calculate_discounted_rates(rates_data, apartment_id):
             break
 
     if base_price is None:
+        if TEST_MODE:
+            print(f"  [DEBUG] {apartment_id} — δεν βρεθηκε base_price, skip")
         return operations, date_grouped_prices
 
-    # Μόνο delta 4 → 0
+    if TEST_MODE:
+        print(f"  [DEBUG] {apartment_id} — base_price={base_price}EUR")
+
     for delta in range(URGENCY_WINDOW, -1, -1):
         target_date = today + timedelta(days=delta)
         day_info = apt_data.get(target_date.isoformat(), {})
 
-        # Κρατημένη μέρα: καμία αλλαγή
         if not is_available(day_info):
+            if TEST_MODE:
+                print(f"  [DEBUG] {apartment_id} — {target_date} kratimeni, skip")
             continue
 
-        # Τετραγωνική urgency: max_drop × (1 - delta/4)²
         urgency = max_drop * (1 - delta / URGENCY_WINDOW) ** 2
         new_price = round(max(base_price * (1 - urgency), FLOOR_PRICE))
 
@@ -137,9 +139,9 @@ def process_rates(apartment_id, operations):
 # ---------------- MAIN ----------------
 def main():
     if TEST_MODE:
-        print("\n[TEST MODE] ΔΕΝ αποστέλλονται στο Smoobu\n")
+        print("\n[TEST MODE] DEN apostelontai sto Smoobu\n")
     else:
-        print("\n[LIVE] Αποστέλλονται στο Smoobu\n")
+        print("\n[LIVE] Apostelontai sto Smoobu\n")
 
     start = today.isoformat()
     end = (today + timedelta(days=URGENCY_WINDOW)).isoformat()
@@ -149,11 +151,14 @@ def main():
         all_apartments = get_apartments()
         apartment_ids = [apt_id for apt_id in all_apartments if apt_id in valid_apartment_ids]
     except Exception as e:
-        print(f"Σφάλμα φόρτωσης καταλυμάτων: {e}")
+        print(f"Sfalma fortosis: {e}")
         return
 
+    if TEST_MODE:
+        print(f"Vrethikan {len(apartment_ids)} apartments: {apartment_ids}\n")
+
     if not apartment_ids:
-        print("Δεν βρέθηκαν έγκυρα καταλύματα.")
+        print("Den vrethikan egkyra katalymata.")
         return
 
     all_dates_prices = defaultdict(list)
@@ -166,14 +171,14 @@ def main():
                 all_dates_prices[dt].extend(entries)
             process_rates(apt_id, operations)
         except Exception as e:
-            print(f"⚠️ Σφάλμα για κατάλυμα {apt_id}: {e}")
+            print(f"Sfalma gia {apt_id}: {e}")
         time.sleep(SLEEP_BETWEEN_REQUESTS)
 
-    print("================== ΠΡΟΕΠΙΣΚΟΠΗΣΗ ==================")
+    print("\n================== PROEPISKOPISI ==================")
     for dt in sorted(all_dates_prices):
         print(dt)
         for apt_id, new_price in all_dates_prices[dt]:
-            print(f"  {apt_id} | {new_price}€")
+            print(f"  {apt_id} | {new_price}EUR")
         print()
 
 
