@@ -107,6 +107,9 @@ def calculate_discounted_rates(rates_data, apartment_id):
         target_date = today + timedelta(days=delta)
         day_info = apt_data.get(target_date.isoformat(), {})
 
+        if TEST_MODE:
+            print(f"  [DEBUG] {apartment_id} — {target_date} day_info: {day_info}")
+
         if not is_available(day_info):
             if TEST_MODE:
                 print(f"  [DEBUG] {apartment_id} — {target_date} kratimeni, skip")
