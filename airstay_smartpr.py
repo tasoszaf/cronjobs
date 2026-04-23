@@ -105,8 +105,8 @@ def calculate_discounted_rates(rates_data, apartment_id):
         if not is_available(day_info):
             continue
 
-        urgency = max_drop * (1 - delta / URGENCY_WINDOW) ** 2
-        new_price = round(max(base_price * (1 - urgency), FLOOR_PRICE))
+        step = (base_price * max_drop) / (URGENCY_WINDOW + 1)
+        new_price = round(max(base_price - step * (URGENCY_WINDOW - delta), FLOOR_PRICE))
 
         operations.append({
             "dates": [target_date.isoformat()],
