@@ -10,7 +10,7 @@ from collections import defaultdict
 # ---------------- SETTINGS ----------------
 RETRY_LIMIT = 3
 SLEEP_BETWEEN_REQUESTS = 1
-TEST_MODE = True
+TEST_MODE = False
 
 CUSTOMER_ID = int(os.getenv("SMOOBU_CUSTOMER_ID"))
 API_KEY = os.getenv("SMOOBU_API_KEY")
@@ -21,24 +21,21 @@ headers = {
 }
 
 GROUPS = {
-    "KALISTA":  {"apartments": [750921],                                         "max_drop": 0.20},
-    "ORIANNA":  {"apartments": [1607131],                                        "max_drop": 0.20},
-    "ANIVIA":   {"apartments": [563703, 563706],                                 "max_drop": 0.20},
-    "ELISE":    {"apartments": [563625, 1405415, 3231667],                       "max_drop": 0.20},
+    "KALISTA":  {"apartments": [750921],                                         "max_drop": 0.25},
+    "ORIANNA":  {"apartments": [1607131],                                        "max_drop": 0.25},
+    "ANIVIA":   {"apartments": [563703, 563706],                                 "max_drop": 0.25},
+    "ELISE":    {"apartments": [563625, 1405415, 3231667],                       "max_drop": 0.25},
     "JAAX":     {"apartments": [2712218],                                        "max_drop": 0.25},
-    "AKALI":    {"apartments": [1713746],                                        "max_drop": 0.20},
+    "AKALI":    {"apartments": [1713746],                                        "max_drop": 0.25},
     "KOMOS":    {"apartments": [2160281, 2160286, 2160291],                      "max_drop": 0.30},
-    "CHELI":    {"apartments": [2146456, 2146461],                               "max_drop": 0.20},
-    "NAUTILUS": {"apartments": [563712, 563724, 563718, 563721, 563715, 563727], "max_drop": 0.20},
+    "CHELI":    {"apartments": [2146456, 2146461],                               "max_drop": 0.25},
+    "NAUTILUS": {"apartments": [563712, 563724, 563718, 563721, 563715, 563727], "max_drop": 0.25},
     "NAMI":     {"apartments": [1275248],                                        "max_drop": 0.30},
-    "THRESH":   {"apartments": [563628, 563631, 563643],                         "max_drop": 0.20},
+    "THRESH":   {"apartments": [563628, 563631, 563643],                         "max_drop": 0.25},
 }
 
-# Urgency παράθυρο: σήμερα + 4 μέρες μπροστά
 URGENCY_WINDOW = 4
-
-# Floor price — δεν πέφτεις ποτέ κάτω
-FLOOR_PRICE = 52
+FLOOR_PRICE = 55
 
 today = datetime.today().date()
 
@@ -53,7 +50,7 @@ def safe_request(method, url, **kwargs):
         except requests.RequestException:
             pass
         time.sleep(SLEEP_BETWEEN_REQUESTS)
-    raise Exception(f"❌ Αποτυχία {method} στο {url} μετά από {RETRY_LIMIT} προσπάθειες")
+    raise Exception(f"Αποτυχια {method} στο {url}")
 
 
 def get_apartments():
@@ -77,8 +74,7 @@ def get_group_discount(apartment_id):
 
 
 def is_available(day_info: dict) -> bool:
-    """True αν η μέρα είναι ΑΔΕΙΑ."""
-    return day_info.get("available", True) is True
+    return bool(day_info.get("available", 1))
 
 
 # ---------------- RATE CALCULATION ----------------
@@ -89,29 +85,21 @@ def calculate_discounted_rates(rates_data, apartment_id):
     max_drop = get_group_discount(apartment_id)
     apt_data = rates_data.get("data", {}).get(str(apartment_id), {})
 
-    # Base price: η τιμή του delta=4 (ή η πρώτη διαθέσιμη)
-    base_price = None
-    for d in range(URGENCY_WINDOW, -1, -1):
-        day_info = apt_data.get((today + timedelta(days=d)).isoformat(), {})
-        if day_info.get("price") is not None:
-            base_price = day_info["price"]
-            break
 
-    if base_price is None:
-        return operations, date_grouped_prices
-
-    # Μόνο delta 4 → 0
     for delta in range(URGENCY_WINDOW, -1, -1):
         target_date = today + timedelta(days=delta)
         day_info = apt_data.get(target_date.isoformat(), {})
 
-        # Κρατημένη μέρα: καμία αλλαγή
         if not is_available(day_info):
             continue
 
-        # Τετραγωνική urgency: max_drop × (1 - delta/4)²
-        urgency = max_drop * (1 - delta / URGENCY_WINDOW) ** 2
-        new_price = round(max(base_price * (1 - urgency), FLOOR_PRICE))
+        day_price = day_info.get("price")
+        if day_price is None:
+            continue
+
+        
+        discount = (max_drop / (URGENCY_WINDOW + 1)) * (URGENCY_WINDOW - delta + 1)
+        new_price = round(max(day_price * (1 - discount), FLOOR_PRICE))
 
         operations.append({
             "dates": [target_date.isoformat()],
@@ -137,9 +125,9 @@ def process_rates(apartment_id, operations):
 # ---------------- MAIN ----------------
 def main():
     if TEST_MODE:
-        print("\n[TEST MODE] ΔΕΝ αποστέλλονται στο Smoobu\n")
+        print("\n[TEST MODE] DEN apostelontai sto Smoobu\n")
     else:
-        print("\n[LIVE] Αποστέλλονται στο Smoobu\n")
+        print("\n[LIVE] Apostelontai sto Smoobu\n")
 
     start = today.isoformat()
     end = (today + timedelta(days=URGENCY_WINDOW)).isoformat()
@@ -149,11 +137,11 @@ def main():
         all_apartments = get_apartments()
         apartment_ids = [apt_id for apt_id in all_apartments if apt_id in valid_apartment_ids]
     except Exception as e:
-        print(f"Σφάλμα φόρτωσης καταλυμάτων: {e}")
+        print(f"Sfalma fortosis: {e}")
         return
 
     if not apartment_ids:
-        print("Δεν βρέθηκαν έγκυρα καταλύματα.")
+        print("Den vrethikan egkyra katalymata.")
         return
 
     all_dates_prices = defaultdict(list)
@@ -166,14 +154,14 @@ def main():
                 all_dates_prices[dt].extend(entries)
             process_rates(apt_id, operations)
         except Exception as e:
-            print(f"⚠️ Σφάλμα για κατάλυμα {apt_id}: {e}")
+            print(f"Sfalma gia {apt_id}: {e}")
         time.sleep(SLEEP_BETWEEN_REQUESTS)
 
-    print("================== ΠΡΟΕΠΙΣΚΟΠΗΣΗ ==================")
+    print("\n================== PROEPISKOPISI ==================")
     for dt in sorted(all_dates_prices):
         print(dt)
         for apt_id, new_price in all_dates_prices[dt]:
-            print(f"  {apt_id} | {new_price}€")
+            print(f"  {apt_id} | {new_price}EUR")
         print()
 
 
