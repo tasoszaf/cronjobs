@@ -29,8 +29,13 @@ MIN_PRICE_SAME_DAY_BY_MONTH = {
     9: 80, 10: 70, 11: 50, 12: 50
 }
 
-TEST_MODE = False  # True = δεν στέλνει στο Smoobu
+TEST_MODE = True  # True = δεν στέλνει στο Smoobu
 
+PREMIUM_SURCHARGE = {
+    2715228: 30,
+    2715233: 50,
+}
+PREMIUM_MONTHS = {5, 6, 7, 8, 9}
 # =====================================================
 # LOAD EXCEL
 # =====================================================
@@ -215,15 +220,19 @@ while current <= end:
     available_sorted = [apt for apt in APARTMENTS if apt in available]
 
     if max_p is None:
-        # Long-term → ίδια τιμή
         for apt in available_sorted:
-            send_price(apt, date_str, price)
+            final_price = price
+            if apt in PREMIUM_SURCHARGE and current.month in PREMIUM_MONTHS:
+                final_price = round(price + PREMIUM_SURCHARGE[apt], 1)
+            send_price(apt, date_str, final_price)
     else:
         step = (max_p - price) / len(available_sorted) if len(available_sorted) > 0 else 0
         for i, apt in enumerate(available_sorted, start=1):
             price_i = price + (i-1)*step
             price_i = min(price_i, max_p)
             price_i = round(price_i, 1)
+            if apt in PREMIUM_SURCHARGE and current.month in PREMIUM_MONTHS:
+                price_i = round(price_i + PREMIUM_SURCHARGE[apt], 1)
             send_price(apt, date_str, price_i)
 
     print(f"✅ {date_str} | Occ={occ:.4f} | x={x} | Base Price={price}")
