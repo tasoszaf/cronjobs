@@ -24,7 +24,8 @@ GROUPS = {
     "PENTHOUSE": {"apartments": [830350, 1713455, 830344, 830347, 1663210, 830323], "max_drop": 0.25},
 }
 
-URGENCY_WINDOW = 4
+URGENCY_WINDOW = 4   # σήμερα + 4 επόμενες = 5 μέρες συνολικά
+DAYS_TOTAL = URGENCY_WINDOW + 1  # 5
 FLOOR_PRICE = 55
 
 today = datetime.today().date()
@@ -75,6 +76,10 @@ def calculate_discounted_rates(rates_data, apartment_id):
     max_drop = get_group_discount(apartment_id)
     apt_data = rates_data.get("data", {}).get(str(apartment_id), {})
 
+    # Ημερήσια έκπτωση: max_drop / DAYS_TOTAL
+    # π.χ. 25% / 5 = 5% την ημέρα
+    daily_discount = max_drop / DAYS_TOTAL
+
     for delta in range(URGENCY_WINDOW, -1, -1):
         target_date = today + timedelta(days=delta)
         day_info = apt_data.get(target_date.isoformat(), {})
@@ -86,8 +91,8 @@ def calculate_discounted_rates(rates_data, apartment_id):
         if day_price is None:
             continue
 
-        discount = (max_drop / (URGENCY_WINDOW + 1)) * (URGENCY_WINDOW - delta + 1)
-        new_price = round(max(day_price * (1 - discount), FLOOR_PRICE))
+        # Εφαρμογή σταθερής ημερήσιας έκπτωσης στην τρέχουσα τιμή του Smoobu
+        new_price = round(max(day_price * (1 - daily_discount), FLOOR_PRICE))
 
         operations.append({
             "dates": [target_date.isoformat()],
@@ -96,7 +101,7 @@ def calculate_discounted_rates(rates_data, apartment_id):
         })
 
         date_grouped_prices.setdefault(target_date.isoformat(), []).append(
-            (apartment_id, new_price)
+            (apartment_id, day_price, new_price, round(daily_discount * 100, 1))
         )
 
     return operations, date_grouped_prices
@@ -113,9 +118,9 @@ def process_rates(apartment_id, operations):
 # ---------------- MAIN ----------------
 def main():
     if TEST_MODE:
-        print("\n[TEST MODE] DEN apostelontai sto Smoobu\n")
+        print("\n[TEST MODE] ΔΕΝ αποστέλλονται στο Smoobu\n")
     else:
-        print("\n[LIVE] Apostelontai sto Smoobu\n")
+        print("\n[LIVE] Αποστέλλονται στο Smoobu\n")
 
     start = today.isoformat()
     end = (today + timedelta(days=URGENCY_WINDOW)).isoformat()
@@ -125,11 +130,11 @@ def main():
         all_apartments = get_apartments()
         apartment_ids = [apt_id for apt_id in all_apartments if apt_id in valid_apartment_ids]
     except Exception as e:
-        print(f"Sfalma fortosis: {e}")
+        print(f"Σφάλμα φόρτωσης: {e}")
         return
 
     if not apartment_ids:
-        print("Den vrethikan egkyra katalymata.")
+        print("Δεν βρέθηκαν έγκυρα καταλύματα.")
         return
 
     all_dates_prices = defaultdict(list)
@@ -142,14 +147,14 @@ def main():
                 all_dates_prices[dt].extend(entries)
             process_rates(apt_id, operations)
         except Exception as e:
-            print(f"Sfalma gia {apt_id}: {e}")
+            print(f"Σφάλμα για {apt_id}: {e}")
         time.sleep(SLEEP_BETWEEN_REQUESTS)
 
-    print("\n================== PROEPISKOPISI ==================")
+    print("\n================== ΠΡΟΕΠΙΣΚΟΠΗΣΗ ==================")
     for dt in sorted(all_dates_prices):
         print(dt)
-        for apt_id, new_price in all_dates_prices[dt]:
-            print(f"  {apt_id} | {new_price}EUR")
+        for apt_id, old_price, new_price, pct in all_dates_prices[dt]:
+            print(f"  {apt_id} | {old_price}€ → {new_price}€  (-{pct}%)")
         print()
 
 
